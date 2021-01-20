@@ -8,32 +8,61 @@
 
 ;; CHANGE add the missing ones
 
-(struct var  (string) #:transparent)    ;; a variable, e.g., (var "foo")
-(struct num  (int)    #:transparent)    ;; a constant number, e.g., (num 17)
-(struct plus  (e1 e2)  #:transparent)   ;; add two expressions
+(struct var     (string)    #:transparent)    ;; a variable, e.g., (var "foo")
+(struct num     (int)       #:transparent)    ;; a constant number, e.g., (num 17)
+(struct bool    (bool)      #:transparent)    ;; a boolean variable, e.g, (#t or #f)
+
+(struct minus   (e1 e2)     #:transparent)    ;; subtract two expressions
+(struct mult    (e1 e2)     #:transparent)    ;; multiply two expressions
+(struct div     (e1 e2)     #:transparent)    ;; divide two expressions
+(struct plus    (e1 e2)     #:transparent)    ;; add two expressions
+
+(struct neg     (e1)        #:transparent)    ;; negate an expression
+(struct andalso (e1 e2)     #:transparent)    ;; logical and two expressions
+(struct orelse  (e1 e2)     #:transparent)    ;; logical or two expressions
+(struct cnd     (e1 e2 e3)  #:transparent)    ;; condition, if e1 then e2 else e3
+
+(struct iseq    (e1 e2)     #:transparent)    ;; check equality
+(struct ifnzero (e1 e2 e3)  #:transparent)    ;; if e1 is zero then e2 else e3
+(struct ifleq   (e1 e2 e3 e4) #:transparent)  ;; if e1 < e2 then e3 else e4
 
 
-(struct lam  (nameopt formal body) #:transparent) ;; a recursive(?) 1-argument function
-(struct apply (funexp actual)       #:transparent) ;; function application
+(struct lam     (s1 s2 e)   #:transparent)    ;; a recursive(?) 1-argument function
+(struct apply   (e1 e2)     #:transparent)    ;; function application
+(struct with    (s e1 e2)   #:transparent)    ;; let e1 be s in e2
+(struct apair   (e1 e2)     #:transparent)    ;; a pair of two expressions
+(struct first   (e1)          #:transparent)  ;; first element of pair
+(struct second  (e1)         #:transparent)   ;; second element of pair
 
-
-(struct munit   ()      #:transparent) ;; unit value -- good for ending a list
-(struct ismunit (e)     #:transparent) ;; if e1 is unit then true else false
+(struct munit   ()          #:transparent)    ;; unit value -- good for ending a list
+(struct ismunit (e)         #:transparent)    ;; if e1 is unit then true else false
 
 ;; a closure is not in "source" programs; it is what functions evaluate to
-(struct closure (env f) #:transparent) 
+(struct closure (env f)     #:transparent) 
 
 
-(struct key  (s e) #:transparent) ;; key holds corresponding value of s which is e
-(struct record (k r) #:transparent) ;; record holds several keys
-(struct value (s r) #:transparent) ;; value returns corresponding value of s in r
+(struct key     (s e)         #:transparent)  ;; key holds corresponding value of s which is e
+(struct record  (k r)        #:transparent)   ;; record holds several keys
+;; TODO: record with k and munit m
+(struct value   (s r)         #:transparent)  ;; value returns corresponding value of s in r
 
-(struct letrec (s1 e1 s2 e2 s3 e3 s4 e4 e5) #:transparent) ;; a letrec expression for recursive definitions
+(struct letrec  (s1 e1 s2 e2 s3 e3 s4 e4 e5) #:transparent) ;; a letrec expression for recursive definitions
 
 ;; Problem 1
 
-(define (racketlist->numexlist xs) "CHANGE")
-(define (numexlist->racketlist xs) "CHANGE")
+(define (racketlist->numexlist xs) (cond  [(equal? xs '())
+                                                (munit)]
+                                          [#t
+                                                (apair (car xs) (racketlist->numexlist (cdr xs)))]
+                                    )
+)
+
+(define (numexlist->racketlist xs) (cond  [(equal? xs munit) 
+                                                '()]
+                                          [#t
+                                                (cons (first xs) (numexlist->racketlist (second xs)))  ]
+                                    )
+)
 
 ;; Problem 2
 
