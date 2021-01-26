@@ -345,3 +345,62 @@
               )
         )]
         [#t (error (format "bad NUMEX expression: ~v" e))]))
+
+;; Do NOT change
+(define (eval-exp e)
+  (eval-under-env e null))
+        
+;; Problem 3
+
+(define (ifmunit e1 e2 e3) 
+  (cond 
+    [(eq? (munit? e1) #t) (e2)]
+    [#t e3]
+  )
+)
+
+(define (with* bs e2)
+  (cond
+    [(null? bs) (with "s" (munit) (e2))]
+    [#t (with  (car (car bs))
+              (cdr (car bs))
+              (with* (cdr bs) e2)
+        )
+    ]
+  )
+)
+
+(define (ifneq e1 e2 e3 e4)
+  (let  (
+          [v1 e1]
+          [v2 e2]
+        )
+        (
+          ifleq v1 v2 (ifleq v2 v1 e4 e3) e3
+        )
+  )
+)
+
+;; Problem 4
+
+(define numex-filter "CHANGE")
+
+(define numex-all-gt
+  (with "filter" numex-filter
+        "CHANGE (notice filter is now in NUMEX scope)"))
+
+;; Challenge Problem
+
+(struct fun-challenge (nameopt formal body freevars) #:transparent) ;; a recursive(?) 1-argument function
+
+;; We will test this function directly, so it must do
+;; as described in the assignment
+(define (compute-free-vars e) "CHANGE")
+
+;; Do NOT share code with eval-under-env because that will make grading
+;; more difficult, so copy most of your interpreter here and make minor changes
+(define (eval-under-env-c e env) "CHANGE")
+
+;; Do NOT change this
+(define (eval-exp-c e)
+  (eval-under-env-c (compute-free-vars e) null))
