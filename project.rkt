@@ -375,19 +375,44 @@
           [v1 e1]
           [v2 e2]
         )
-        (
-          ifleq v1 v2 (ifleq v2 v1 e4 e3) e3
+        (cond 
+              [(and (num? v1) (num? v2)) (ifleq v1 v2 (ifleq v2 v1 e4 e3) e3)]
+              [(and (bool? v1) (bool? v2)) (cnd (orelse (andalso v1 v2) (andalso (neg v1) (neg v2))) e4 e3)]
         )
   )
 )
 
 ;; Problem 4
 
-(define numex-filter "CHANGE")
+(define numex-filter
+  (lam "f" "func"   (lam "map" "list" (ifneq  (ismunit (var "list")) (bool #f)
+                                              (munit)
+                                              (cond
+                                                [(eq? (apply (var "func") (first (var "list"))) (num 0) ) (apply (var "map") (second (var "list")))]
+                                                [#t (apair (apply (var "func") (first (var "list"))) (apply (var "map") (second (var "list"))))]
+                                              )                                              
+                                      )
+                    )
+  )
+)
 
 (define numex-all-gt
-  (with "filter" numex-filter
-        "CHANGE (notice filter is now in NUMEX scope)"))
+  (lam "f" "i"
+    (lam "allgt" "list"
+      (apply
+        (apply numex-filter (fun "getgt" "x" 
+                                (if (iseq (var "x") (var "i"))
+                                    (num 0)
+                                    (ifleq (var "i") (var "x") (num 1) (num 0))
+                                )
+                            )
+        )
+        (var "list")
+      )
+    )
+  )
+)
+
 
 ;; Challenge Problem
 
