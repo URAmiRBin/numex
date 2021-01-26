@@ -129,7 +129,7 @@
                   [v2 (eval-under-env (div-e2 e) env)]
                 )
                 (if (and (num? v1) (num? v2) (ifnzero v2 #t #f))
-                    (num (/ (num-int v1) (num-int v2)))
+                    (num (quotient (num-int v1) (num-int v2)))
                     (error "NUMEX division applied to non-number or e2 is zero")
                 )
           )
@@ -191,6 +191,13 @@
                               [#t (bool #f)]
                             )
                         ]
+                        [(and (bool? v1) (bool? v2))
+                            (cond 
+                                [(equal? (bool-boolean v1) (bool-boolean v2)) (bool #t)]
+                                [#t (bool #f)]
+                            )
+                        ]
+                        [(or (and (bool? v1) (num? v2)) (and (num? v1) (bool? v2))) (bool #f)]
                         [#t (error "NUMEX iseq args should be num")]
                   )      
             )
@@ -344,6 +351,7 @@
                   (error "NUMEX first arg should be string and second record")
               )
         )]
+        [(munit? e) (munit)]
         [#t (error (format "bad NUMEX expression: ~v" e))]))
 
 ;; Do NOT change
@@ -354,14 +362,14 @@
 
 (define (ifmunit e1 e2 e3) 
   (cond 
-    [(eq? (munit? e1) #t) (e2)]
+    [(eq? (munit? e1) #t) e2]
     [#t e3]
   )
 )
 
 (define (with* bs e2)
   (cond
-    [(null? bs) (with "s" (munit) (e2))]
+    [(null? bs) (with "s" (munit) e2)]
     [#t (with  (car (car bs))
               (cdr (car bs))
               (with* (cdr bs) e2)
@@ -385,11 +393,12 @@
 ;; Problem 4
 
 (define numex-filter
-  (lam "f" "func"   (lam "map" "list" (ifneq  (ismunit (var "list")) (bool #f)
+  (lam "f" "func"   (lam "map" "list" (cnd  (ismunit (var "list"))
                                               (munit)
-                                              (cond
-                                                [(eq? (apply (var "func") (first (var "list"))) (num 0) ) (apply (var "map") (second (var "list")))]
-                                                [#t (apair (apply (var "func") (first (var "list"))) (apply (var "map") (second (var "list"))))]
+                                              (cnd
+                                                (iseq (apply (var "func") (first (var "list"))) (num 0) )
+                                                (apply (var "map") (second (var "list")))
+                                                (apair (first (var "list")) (apply (var "map") (second (var "list"))))
                                               )                                              
                                       )
                     )
@@ -400,8 +409,8 @@
   (lam "f" "i"
     (lam "allgt" "list"
       (apply
-        (apply numex-filter (fun "getgt" "x" 
-                                (if (iseq (var "x") (var "i"))
+        (apply numex-filter (lam "getgt" "x" 
+                                (cnd (iseq (var "x") (var "i"))
                                     (num 0)
                                     (ifleq (var "i") (var "x") (num 1) (num 0))
                                 )
