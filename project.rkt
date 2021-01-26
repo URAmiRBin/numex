@@ -62,7 +62,7 @@
 ;; Complete this function
 (define (envlookup env str)
   (cond [(null? env) (error "unbound variable during evaluation" str)]
-  		  [(equal? (car (car env)) str) (cdr (car (env)))]
+  		  [(equal? (car (car env)) str) (cdr (car env))]
         [#t (envlookup (cdr env) str)]
 		)
  )
@@ -73,20 +73,20 @@
 (define (eval-under-env e env)
   (cond 
         [(var? e)
-          (if (string? (var-string e) env)
+          (if (string? (var-string e))
               (envlookup env (var-string e))
               (error "NUMEX var should be string")
           )
         ]
         [(num? e)
-          (if (integer? (num-int e) env)
-              (envlookup env (num-int e))
+          (if (integer? (num-int e))
+              (num (num-int e))
               (error "NUMEX num should be an integer")
           )
         ]
         [(bool? e)
-          (if (boolean? (num-int e) env)
-              (envlookup env (bool-boolean e))
+          (if (boolean? (bool-boolean e))
+              (bool (bool-boolean e))
               (error "NUMEX bool should be a boolean")
           )
         ]
@@ -162,7 +162,7 @@
                 )
                 (cond
                   [(num? v1) (num (- (num-int v1)))]
-                  [(bool? v1) (not (bool-boolean v1))]
+                  [(bool? v1) (bool (not (bool-boolean v1)))]
                   [#t (error "NUMEX neg applied to non-num and non-bool")]
                 )
           )
@@ -201,8 +201,8 @@
                   )
                   (if (num? v1)
                       (cond
-                        [(eq? (num-int v1) 0) (eval-under-env (ifnzero-e2 e) env)]
-                        [#t (eval-under-env (ifnzero-e3 e) env)]
+                        [(eq? (num-int v1) 0) (eval-under-env (ifnzero-e3 e) env)]
+                        [#t (eval-under-env (ifnzero-e2 e) env)]
                       )
                       (error "NUMEX ifnzero first arg should be num")
                   )
@@ -210,12 +210,12 @@
         ]
         [(ifleq? e)
           (let  (
-                  [v1 (eval-under-env) (ifleq-e1 e) env]
-                  [v2 (eval-under-env) (ifleq-e2 e) env]
+                  [v1 (eval-under-env (ifleq-e1 e) env)]
+                  [v2 (eval-under-env (ifleq-e2 e) env)]
                 )
                 (if (and (num? v1) (num? v2))
                     (cond
-                      [ (or (eq? (num-int e1) (num-int e2)) (< (num-int e1) (num-int e1)))
+                      [ (or (eq? (num-int v1) (num-int v2)) (< (num-int v1) (num-int v2)))
                         (eval-under-env (ifleq-e3 e) env)
                       ]
                       [#t (eval-under-env (ifleq-e4 e) env)]
@@ -226,13 +226,14 @@
         ]
         [(with? e)
           (let  (
-                  [v1 (eval-under-env) (with-e1 e) env]
+                  [v1 (eval-under-env (with-e1 e) env)]
                 )
                 (eval-under-env (with-e2 e) (cons (cons (with-s e) v1) env))
           )
         ]
+        [(lam? e) (closure env e)]
         [(closure? e)
-          (e)
+          (closure (closure-env e) (closure-f e))
         ]
         [(apply? e)
           (let  (
@@ -271,7 +272,7 @@
                 [v1 (eval-under-env (first-e1 e) env)]
               )
               (cond
-                [(apair? v1) (apair-e1 v1) env]
+                [(apair? v1) (eval-under-env (apair-e1 v1) env)]
                 [#t (error "NUMEX first arg should be apair")]
               )
         )]
@@ -281,7 +282,7 @@
               )
 
               (cond
-                [(apair? v1) (apair-e2 v1) env]
+                [(apair? v1) (eval-under-env (apair-e2 v1) env)]
                 [#t (error "NUMEX second arg should be apair")]
               )
         )]
@@ -344,39 +345,3 @@
               )
         )]
         [#t (error (format "bad NUMEX expression: ~v" e))]))
-
-;; Do NOT change
-(define (eval-exp e)
-  (eval-under-env e null))
-        
-;; Problem 3
-
-(define (ifmunit e1 e2 e3) "CHANGE")
-
-(define (with* bs e2) "CHANGE")
-
-(define (ifneq e1 e2 e3 e4) "CHANGE")
-
-;; Problem 4
-
-(define numex-filter "CHANGE")
-
-(define numex-all-gt
-  (with "filter" numex-filter
-        "CHANGE (notice filter is now in NUMEX scope)"))
-
-;; Challenge Problem
-
-(struct fun-challenge (nameopt formal body freevars) #:transparent) ;; a recursive(?) 1-argument function
-
-;; We will test this function directly, so it must do
-;; as described in the assignment
-(define (compute-free-vars e) "CHANGE")
-
-;; Do NOT share code with eval-under-env because that will make grading
-;; more difficult, so copy most of your interpreter here and make minor changes
-(define (eval-under-env-c e env) "CHANGE")
-
-;; Do NOT change this
-(define (eval-exp-c e)
-  (eval-under-env-c (compute-free-vars e) null))
