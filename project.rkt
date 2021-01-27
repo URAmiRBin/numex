@@ -28,8 +28,8 @@
 (struct apply   (e1 e2)     #:transparent)    ;; function application
 (struct with    (s e1 e2)   #:transparent)    ;; let e1 be s in e2
 (struct apair   (e1 e2)     #:transparent)    ;; a pair of two expressions
-(struct first   (e1)        #:transparent)    ;; first element of pair
-(struct second  (e1)        #:transparent)    ;; second element of pair
+(struct 1st   (e1)        #:transparent)    ;; first element of pair
+(struct 2nd  (e1)        #:transparent)    ;; second element of pair
 
 (struct munit   ()          #:transparent)    ;; unit value -- good for ending a list
 (struct ismunit (e)         #:transparent)    ;; if e1 is unit then true else false
@@ -45,12 +45,12 @@
 
 ;; Problem 1
 
-(define (racketlist->numexlist xs) (cond  [(equal? xs '()) (munit)]
+(define (racketlist->numexlist xs) (cond  [(null? xs) (munit)]
                                           [#t (apair (car xs) (racketlist->numexlist (cdr xs)))]
                                     )
 )
 
-(define (numexlist->racketlist xs) (cond  [(equal? xs munit) '()]
+(define (numexlist->racketlist xs) (cond  [(munit? xs) null]
                                           [#t (cons (apair-e1 xs) (numexlist->racketlist (apair-e2 xs)))]
                                     )
 )
@@ -137,22 +137,18 @@
         [(andalso? e)
           (let  (
                   [v1 (eval-under-env (andalso-e1 e) env)]
-                    [v2 (eval-under-env (andalso-e2 e) env)]
                 )
-                (if (and (bool? v1) (bool? v2))
-                    (bool (and (bool-boolean v1) (bool-boolean v2)))
-                    (error "NUMEX and also applied to non-bool")
+                (cond [(bool? v1) (if (eq? (bool-boolean v1) #f) (bool #f) (eval-under-env (andalso-e2 e) env))]
+                      [#t (error "NUMEX and also applied to non bool")]
                 )
           )
         ]
         [(orelse? e)
           (let  (
                   [v1 (eval-under-env (orelse-e1 e) env)]
-                  [v2 (eval-under-env (orelse-e2 e) env)]
                 )
-                (if (and (bool? v1) (bool? v2))
-                    (bool (or (bool-boolean v1) (bool-boolean v2)))
-                    (error "NUMEX or else applied to non-bool")
+                (cond [(bool? v1) (if (eq? (bool-boolean v1) #t) (bool #t) (eval-under-env (orelse-e2 e) env))]
+                      [#t (error "NUMEX orelse applied to non bool")]
                 )
           )
         ]
@@ -274,18 +270,18 @@
               (apair v1 v2)
         )
         ]
-        [(first? e)
+        [(1st? e)
         (let  (
-                [v1 (eval-under-env (first-e1 e) env)]
+                [v1 (eval-under-env (1st-e1 e) env)]
               )
               (cond
                 [(apair? v1) (eval-under-env (apair-e1 v1) env)]
                 [#t (error "NUMEX first arg should be apair")]
               )
         )]
-        [(second? e)
+        [(2nd? e)
         (let  (
-                [v1 (eval-under-env (second-e1 e) env)]
+                [v1 (eval-under-env (2nd-e1 e) env)]
               )
 
               (cond
@@ -310,7 +306,7 @@
                 [v4 (eval-under-env (letrec-e4 e) env)]
               )
               (
-                eval-under-env (letrec-e5 e)  (cons (cons (letrec-s4 3) v4)
+                eval-under-env (letrec-e5 e)  (cons (cons (letrec-s4 e) v4)
                                                     (cons  (cons (letrec-s3 e) v3)
                                                     (cons  (cons (letrec-s2 e) v2)
                                                     (cons (cons (letrec-s1 e) v1) env))))
@@ -361,15 +357,14 @@
 ;; Problem 3
 
 (define (ifmunit e1 e2 e3) 
-  (cond 
-    [(eq? (munit? e1) #t) e2]
-    [#t e3]
+  (cnd 
+    (ismunit e1) e2 e3
   )
 )
 
 (define (with* bs e2)
   (cond
-    [(null? bs) (with "s" (munit) e2)]
+    [(null? bs) e2]
     [#t (with  (car (car bs))
               (cdr (car bs))
               (with* (cdr bs) e2)
@@ -378,17 +373,7 @@
   )
 )
 
-(define (ifneq e1 e2 e3 e4)
-  (let  (
-          [v1 e1]
-          [v2 e2]
-        )
-        (cond 
-              [(and (num? v1) (num? v2)) (ifleq v1 v2 (ifleq v2 v1 e4 e3) e3)]
-              [(and (bool? v1) (bool? v2)) (cnd (orelse (andalso v1 v2) (andalso (neg v1) (neg v2))) e4 e3)]
-        )
-  )
-)
+(define (ifneq e1 e2 e3 e4) (cnd (iseq e1 e2) e4 e3))
 
 ;; Problem 4
 
@@ -396,9 +381,9 @@
   (lam "f" "func"   (lam "map" "list" (cnd  (ismunit (var "list"))
                                               (munit)
                                               (cnd
-                                                (iseq (apply (var "func") (first (var "list"))) (num 0) )
-                                                (apply (var "map") (second (var "list")))
-                                                (apair (first (var "list")) (apply (var "map") (second (var "list"))))
+                                                (iseq (apply (var "func") (1st (var "list"))) (num 0) )
+                                                (apply (var "map") (2nd (var "list")))
+                                                (apair (apply (var "func") (1st (var "list"))) (apply (var "map") (2nd (var "list"))))
                                               )                                              
                                       )
                     )
@@ -412,7 +397,7 @@
         (apply numex-filter (lam "getgt" "x" 
                                 (cnd (iseq (var "x") (var "i"))
                                     (num 0)
-                                    (ifleq (var "i") (var "x") (num 1) (num 0))
+                                    (ifleq (var "i") (var "x") (var "x") (num 0))
                                 )
                             )
         )
@@ -446,12 +431,12 @@
               (cons (neg (car v1)) (cdr v1)))
     ]
 
-    [(first? e) (let ([v1 (compute-free-vars-rec (first-e1 e))])
-              (cons (first (car v1)) (cdr v1)))
+    [(1st? e) (let ([v1 (compute-free-vars-rec (1st-e1 e))])
+              (cons (1st (car v1)) (cdr v1)))
     ]
 
-    [(second? e) (let ([v1 (compute-free-vars-rec (second-e1 e))])
-              (cons (second (car v1)) (cdr v1)))
+    [(2nd? e) (let ([v1 (compute-free-vars-rec (2nd-e1 e))])
+              (cons (2nd (car v1)) (cdr v1)))
     ]
 
     [(ismunit? e) (let ([v1 (compute-free-vars-rec (ismunit-e e))])
@@ -578,6 +563,35 @@
             )
             (cons (with (with-s e) (car v1) (car v2))
                   (set-remove (set-union (cdr v1) (cdr v2)) (with-s e))
+            )
+      )
+    ]
+
+    [(letrec? e)
+      (let  (
+              [v1 (compute-free-vars-rec (letrec-e1 e))]
+              [v2 (compute-free-vars-rec (letrec-e2 e))]
+              [v3 (compute-free-vars-rec (letrec-e3 e))]
+              [v4 (compute-free-vars-rec (letrec-e4 e))]
+              [v5 (compute-free-vars-rec (letrec-e4 e))]
+            )
+            (cons (letrec (letrec-s1 e) (car v1) (letrec-s2 e) (car v2) (letrec-s3 e) (car v3) (letrec-s4 e) (car v4) (car v5))
+                  (set-remove
+                    (set-union  (cdr v1)
+                                (set-union  (cdr v2)
+                                            (set-union  (cdr v3)
+                                                        (set-union (cdr v4) (cdr v5))
+                                            )
+                                )
+                    )
+                    (set-union  (letrec-s1 e)
+                                (set-union  (letrec-s2 e)
+                                            (set-union  (letrec-s3 e)
+                                                        (letrec-s4 e)
+                                            )
+                                )
+                    )
+                  )
             )
       )
     ]
@@ -806,18 +820,18 @@
               (apair v1 v2)
         )
         ]
-        [(first? e)
+        [(1st? e)
         (let  (
-                [v1 (eval-under-env-c (first-e1 e) env)]
+                [v1 (eval-under-env-c (1st-e1 e) env)]
               )
               (cond
                 [(apair? v1) (eval-under-env-c (apair-e1 v1) env)]
                 [#t (error "NUMEX first arg should be apair")]
               )
         )]
-        [(second? e)
+        [(2nd? e)
         (let  (
-                [v1 (eval-under-env-c (second-e1 e) env)]
+                [v1 (eval-under-env-c (2nd-e1 e) env)]
               )
 
               (cond
@@ -842,7 +856,7 @@
                 [v4 (eval-under-env-c (letrec-e4 e) env)]
               )
               (
-                eval-under-env-c (letrec-e5 e)  (cons (cons (letrec-s4 3) v4)
+                eval-under-env-c (letrec-e5 e)  (cons (cons (letrec-s4 e) v4)
                                                     (cons  (cons (letrec-s3 e) v3)
                                                     (cons  (cons (letrec-s2 e) v2)
                                                     (cons (cons (letrec-s1 e) v1) env))))
