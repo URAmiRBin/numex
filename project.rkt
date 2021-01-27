@@ -239,29 +239,16 @@
           (closure (closure-env e) (closure-f e))
         ]
         [(apply? e)
-          (let  (
-                  [v1 (eval-under-env (apply-e1 e) env)]
-                )
-                (cond
-                  [(closure? v1) (let (
-                                        [v2 (closure-f v1)]
-                                      )
-                                      (let  (
-                                              [v3 (eval-under-env (apply-e2 e) env)]
-                                            )
-                                            (eval-under-env (lam-e v2)
-                                                (cons
-                                                      (cons (lam-s2 v2) v3)
-                                                      (cons (cons  (lam-s1 v2) v1) (closure-env v1))
-                                                )
-                                            )
-                                        )
-                                  )
-                  ]
-                  [#t (error "NUMEX aply first arg should be closure")]
-                )
-          )
-        ]
+          (let ([v (eval-under-env (apply-e2 e) env)]
+                [funexp (eval-under-env (apply-e1 e) env)])
+            (if (closure? funexp)
+              (let ([clsrFun (closure-f funexp)])
+                (if (null? (lam-s1 clsrFun))
+                  (eval-under-env (lam-e clsrFun) (cons (cons (lam-s2 clsrFun) v) (closure-env funexp)))
+                  (eval-under-env (lam-e clsrFun) (cons (cons (lam-s1 clsrFun) funexp) (cons (cons (lam-s2 clsrFun) v) (closure-env funexp))))))
+              (if (lam? funexp)
+                (eval-under-env (apply funexp (apply-e2 e)) env)
+                (error "NUMEX apply applied to non-lam"))))]
         [(apair? e)
         (let  (
                 [v1 (eval-under-env (apair-e1 e) env)]
@@ -299,20 +286,10 @@
               )
         )]
         [(letrec? e)
-        (let  (
-                [v1 (eval-under-env (letrec-e1 e) env)]
-                [v2 (eval-under-env (letrec-e2 e) env)]
-                [v3 (eval-under-env (letrec-e3 e) env)]
-                [v4 (eval-under-env (letrec-e4 e) env)]
-              )
-              (
-                eval-under-env (letrec-e5 e)  (cons (cons (letrec-s4 e) v4)
-                                                    (cons  (cons (letrec-s3 e) v3)
-                                                    (cons  (cons (letrec-s2 e) v2)
-                                                    (cons (cons (letrec-s1 e) v1) env))))
-                                                  
-              )
-        )]
+            (if (and (string? (letrec-s1 e))
+                     (string? (letrec-s2 e)))
+              (eval-under-env (letrec-e5 e) (append (list (cons (letrec-s1 e) (letrec-e1 e)) (cons (letrec-s2 e) (letrec-e2 e))) env))
+              (error "NUMEX letrec names must be string"))]
         [(key? e)
         (let  (
                 [v1 (eval-under-env (key-e e) env)]
