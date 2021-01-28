@@ -2,6 +2,8 @@ NUMEX
 ==
 A Functional Intrepreter written in Racket for Programming Languages Final Project.
 
+> Warning: This project is far from perfect (especially the challenge part), but it somehow passed all the test cases.
+
 Overview
 =================
 This project has to do with NUMEX (**Num**ber-**Ex**pression Programming Language). NUMEX programs are written directly in Racket by using the constructors defined by the structs defined at the beginning of project.rkt (Note: you must define missing ones). Here is the definition of NUMEX's syntax:
