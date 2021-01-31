@@ -916,6 +916,7 @@
 (define (eval-exp-c e)
   (eval-under-env-c (compute-free-vars e) null))
 
+;; SAT with two parameters; checks if a numex expression is satisfiable
 (define (sat e)
   (if (lam2? e)
     (cnd
@@ -957,4 +958,34 @@
         )
       )
     )
+)
+
+(define (listLen e)
+    (if (apair? e)
+        (apply  (lam "len" "list" (cnd (ismunit (var "list")) (num 0) (plus (num 1) (apply (var "len") (2nd (var "list"))))))
+                (eval-exp e)
+        )
+        (error "NUMEX listLen should take apair")
+    )
+    
+)
+
+(define (listSum e)
+    (if (apair? e)
+        (apply  (lam "sum" "list" (cnd (ismunit (var "list")) (num 0) (plus (1st(var "list")) (apply (var "sum") (2nd (var "list"))))))
+                (eval-exp e)
+        )
+        (error "NUMEX listSum should take apair")
+    )
+    
+)
+
+;; Averages items of a numex list
+(define (listAvg e)
+  (if (apair? e)
+      (div  (listSum e)
+            (listLen e)
+      )
+      (error "listAvg should take apair")
+  )
 )
