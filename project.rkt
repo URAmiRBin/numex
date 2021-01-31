@@ -25,6 +25,7 @@
 
 
 (struct lam     (s1 s2 e)   #:transparent)    ;; a recursive(?) 1-argument function
+(struct lam2    (s1 s2 s3 e)#:transparent)    ;; a 2-argument function
 (struct apply   (e1 e2)     #:transparent)    ;; function application
 (struct with    (s e1 e2)   #:transparent)    ;; let e1 be s in e2
 (struct apair   (e1 e2)     #:transparent)    ;; a pair of two expressions
@@ -120,6 +121,7 @@
               )
         )]
         [(lam? e) (closure env e)]
+        [(lam2? e) (lam2 (lam2-s1 e) (lam2-s2 e) (lam2-s3 e) (lam2-e e))]
         [(closure? e)
           (closure (closure-env e) (closure-f e))
         ]
@@ -307,7 +309,24 @@
                   (eval-under-env (lam-e v2) (cons (cons (lam-s1 v2) v1) (cons (cons (lam-s2 v2) v) (closure-env v1))))))
               (if (lam? v1)
                 (eval-under-env (apply v1 (apply-e2 e)) env)
-                (error "NUMEX apply must be applied to closure or lam"))))]
+                (if (lam2? v1)
+                  (let (
+                        [var1 (eval-under-env (1st v) env)]
+                        [var2 (eval-under-env (2nd v) env)]
+                      )
+                      (eval-under-env (lam2-e v1)   (append (list (cons (lam2-s2 v1) var1)
+                                                                  (cons (lam2-s3 v1) var2)
+                                                            )
+                                                            env
+                                                    )
+                      )
+                  )
+                  (error "NUMEX apply must be applied to closure or lam")
+                )
+              )
+            )
+          )
+        ]
         [(letrec? e)
             (if (and (string? (letrec-s1 e))
                      (string? (letrec-s2 e))
@@ -896,3 +915,46 @@
 ;; Do NOT change this
 (define (eval-exp-c e)
   (eval-under-env-c (compute-free-vars e) null))
+
+(define (sat e)
+  (if (lam2? e)
+    (cnd
+      (iseq (apply e (apair (bool #t) (bool #t))) (bool #t) )
+      (bool #t)
+      (cnd
+        (iseq (apply e (apair (bool #t) (bool #f))) (bool #t) )
+        (bool #t)
+        (cnd
+          (iseq (apply e (apair (bool #f) (bool #t))) (bool #t) )
+          (bool #t)
+          (cnd
+            (iseq (apply e (apair (bool #f) (bool #f))) (bool #t) )
+            (bool #t)
+            (bool #f)
+          )
+        )
+      )
+    )
+    (error "NUMEX sat should take a lam2")
+  )
+)
+
+(define (pureSat e)
+    (cnd
+      (iseq (with "x1" (bool #t) (with "x2" (bool #t) e)) (bool #t) )
+      (bool #t)
+      (cnd
+        (iseq (with "x1" (bool #t) (with "x2" (bool #f) e)) (bool #t) )
+        (bool #t)
+        (cnd
+          (iseq (with "x1" (bool #f) (with "x2" (bool #t) e)) (bool #t) )
+          (bool #t)
+          (cnd
+            (iseq (with "x1" (bool #f) (with "x2" (bool #f) e)) (bool #t) )
+            (bool #t)
+            (bool #f)
+          )
+        )
+      )
+    )
+)
